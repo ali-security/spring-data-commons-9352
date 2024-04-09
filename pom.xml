@@ -320,6 +320,19 @@
 				</plugins>
 			</build>
 		</profile>
+		<profile>
+			<id>spring43-next</id>
+			<properties>
+				<spring>4.3.15.RELEASE</spring>
+			</properties>
+		</profile>
+		<profile>
+			<id>spring5-next</id>
+			<properties>
+				<spring>5.0.4.RELEASE</spring>
+				<jackson>2.9.3</jackson>
+			</properties>
+		</profile>
 	</profiles>
 
 	<repositories>
