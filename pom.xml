@@ -6,7 +6,7 @@
 
 	<groupId>org.springframework.data</groupId>
 	<artifactId>spring-data-commons</artifactId>
-	<version>1.13.10.RELEASE</version>
+	<version>1.13.10.RELEASE+sp1</version>
 
 	<name>Spring Data Core</name>
 
