@@ -39,12 +39,16 @@ import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.data.util.TypeInformation;
 import org.springframework.expression.AccessException;
 import org.springframework.expression.EvaluationContext;
+import org.springframework.expression.EvaluationException;
 import org.springframework.expression.Expression;
+import org.springframework.expression.TypeLocator;
 import org.springframework.expression.TypedValue;
 import org.springframework.expression.spel.SpelEvaluationException;
+import org.springframework.expression.spel.SpelMessage;
 import org.springframework.expression.spel.SpelParserConfiguration;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
-import org.springframework.expression.spel.support.SimpleEvaluationContext;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
+import org.springframework.expression.spel.support.StandardTypeConverter;
 import org.springframework.util.Assert;
 import org.springframework.web.bind.WebDataBinder;
 
@@ -104,6 +108,13 @@ class MapDataBinder extends WebDataBinder {
 
 		private static final SpelExpressionParser PARSER = new SpelExpressionParser(
 				new SpelParserConfiguration(false, true));
+		private static final TypeLocator REJECTING_LOCATOR = new TypeLocator() {
+
+			@Override
+			public Class<?> findType(String typeName) throws EvaluationException {
+				throw new SpelEvaluationException(SpelMessage.TYPE_NOT_FOUND, typeName);
+			}
+		};
 
 		private final @NonNull Class<?> type;
 		private final @NonNull Map<String, Object> map;
@@ -161,6 +172,14 @@ class MapDataBinder extends WebDataBinder {
 				throw new NotWritablePropertyException(type, propertyName);
 			}
 
+			StandardEvaluationContext context = new StandardEvaluationContext();
+			context.addPropertyAccessor(new PropertyTraversingMapAccessor(type, conversionService));
+			context.setTypeConverter(new StandardTypeConverter(conversionService));
+			context.setTypeLocator(REJECTING_LOCATOR);
+			context.setRootObject(map);
+
+			Expression expression = PARSER.parseExpression(propertyName);
+
 			PropertyPath leafProperty = getPropertyPath(propertyName).getLeafProperty();
 			TypeInformation<?> owningType = leafProperty.getOwningType();
 			TypeInformation<?> propertyType = owningType.getProperty(leafProperty.getSegment());
@@ -176,15 +195,6 @@ class MapDataBinder extends WebDataBinder {
 
 				value = conversionService.convert(value, TypeDescriptor.forObject(value), typeDescriptor);
 			}
-
-			EvaluationContext context = SimpleEvaluationContext //
-
-					.forPropertyAccessors(new PropertyTraversingMapAccessor(type, conversionService)) //
-					.withConversionService(conversionService) //
-					.withRootObject(map) //
-					.build();
-
-			Expression expression = PARSER.parseExpression(propertyName);
 
 			try {
 				expression.setValue(context, value);
